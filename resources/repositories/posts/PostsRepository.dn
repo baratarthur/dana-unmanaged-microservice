@@ -1,0 +1,55 @@
+uses time.DateUtil
+
+data Post {
+    int id
+    int userId
+    int likes
+    char content[]
+    DateTime ttl // Time to live in miliseconds, for cache eviction
+}
+
+data ReceivePostDTO {
+    int userId
+    char content[]
+}
+
+data SetPostsParamsFormat {
+    Post posts[]
+}
+
+data AddPostParamsFormat {
+    Post newPost
+}
+
+data LikePostParamsFormat {
+    int postId
+}
+
+data GetUserFeedParamsFormat {
+    int userId
+}
+
+data GetPostByIdParamsFormat {
+    int postId
+}
+
+data AddPostInCacheParamsFormat {
+    Post cachePost
+}
+
+data GetPostByIdFromCacheParamsFormat {
+    int postId
+}
+
+interface PostsRepository {
+    transfer Post readingCache[]
+
+    void addPost(store Post newPost)
+    void setPosts(store Post posts[])
+    void addPostInCache(store Post cachePost)
+    Post getPostById(store int postId)
+    Post getPostByIdFromCache(store int postId)
+    Post[] getPosts()
+    Post[] getUserFeed(store int userId)
+    void clearState()
+}

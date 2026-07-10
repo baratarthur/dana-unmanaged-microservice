@@ -1,0 +1,133 @@
+uses libs.utils.Constants
+uses libs.utils.DatabaseConfig
+
+const char debugMSG[] = "[@PostsRepository]"
+const int PAGINATION_SIZE = 5
+const int WRITING_CACHE_SIZE = 40
+const int CONNECTION_READ_POOL_SIZE = 90
+const int MAX_TTL = 5 * 60 * 1000 // 5 minutes
+
+component provides repositories.posts.PostsRepository requires time.TimeUnix timeUnix, time.Calendar ic, data.IntUtil iu, data.mysql.MySQL,
+libs.utils.Logger logger, libs.krabs.LatencyStore ls, data.json.JSONEncoder je, libs.utils.PostsUtils pu {
+    Mutex readingCacheLock = new Mutex()
+    
+    MySQL createNewConnection() {
+        return new MySQL(DatabaseConfig.host, DatabaseConfig.port, DatabaseConfig.user, DatabaseConfig.password, DatabaseConfig.databaseName)
+    }
+
+    void PostsRepository:addPost(store Post newPost) {
+        DateTime startExecutionTime = ic.getTime()
+        char query[] = "INSERT INTO posts (userId, content) VALUES ($(iu.makeString(newPost.userId)), '$(newPost.content)');"
+        MySQL conn = createNewConnection()
+        if(!conn.execute(query)) logger.storeError("Failed to write post in database")
+        conn.close()
+        int executionTime = ls.getMilisecondsExecutionTimeSince(startExecutionTime)
+        char logMsg[] = new char[](
+            debugMSG, " ",
+            "add posts: ",
+            iu.makeString(executionTime),
+            " ms"
+        )
+        logger.storeInfo(logMsg)
+    }
+
+    void PostsRepository:setPosts(store Post posts[]) {
+        readingCache = posts
+    }
+
+    Post[] PostsRepository:getPosts() {
+        return readingCache
+    }
+    
+    Post PostsRepository:getPostByIdFromCache(store int postId) {
+        DateTime startExecutionTime = ic.getTime()
+        for (int i = 0; i < readingCache.arrayLength; i++) {
+            if (readingCache[i].id == postId) {
+                int ttlUnixInSeconds = timeUnix.toUnixTime(readingCache[i].ttl)
+                int nowUnixInSeconds = timeUnix.toUnixTime(ic.getTime())
+                if((nowUnixInSeconds - ttlUnixInSeconds) < 5 * 60) {
+                    int executionTime = ls.getMilisecondsExecutionTimeSince(startExecutionTime)
+                    char logMsg[] = new char[](
+                        debugMSG, " ",
+                        "post $(iu.makeString(postId)) found in cache: ",
+                        iu.makeString(executionTime),
+                        " ms"
+                    )
+                    logger.storeInfo(logMsg)
+                    return readingCache[i]    
+                }
+            }
+        }
+
+        int executionTime = ls.getMilisecondsExecutionTimeSince(startExecutionTime)
+        char logMsg[] = new char[](
+            debugMSG, " ",
+            "post $(iu.makeString(postId)) not in cache: ",
+            iu.makeString(executionTime),
+            " ms"
+        )
+        logger.storeInfo(logMsg)
+        return null
+    }
+
+    void PostsRepository:addPostInCache(store Post cachePost) {
+        mutex(readingCacheLock) { readingCache = new Post[](readingCache, cachePost) }
+    }
+
+    Post PostsRepository:getPostById(store int postId) {
+        DateTime startExecutionTime = ic.getTime()
+        char query[] = "SELECT * FROM posts WHERE id = $(iu.makeString(postId)) LIMIT 1;"
+
+        MySQL conn = createNewConnection()
+        if(!conn.execute(query)) throw new Exception("Failed to fetch post from database")
+        MySQLRow result[] = conn.fetchAll()
+        conn.close()
+
+
+        int executionTime = ls.getMilisecondsExecutionTimeSince(startExecutionTime)
+        char logMsg[] = new char[](
+            debugMSG, " ",
+            "post $(iu.makeString(postId)) recovered from DATABASE: ",
+            iu.makeString(executionTime),
+            " ms"
+        )
+        logger.storeInfo(logMsg)
+        if (result.arrayLength > 0) {
+            Post post = pu.getPostFromMYSQLRow(result[0])
+            return post
+        }
+        return null
+    }
+
+    Post[] PostsRepository:getUserFeed(store int userId) {
+        DateTime startExecutionTime = ic.getTime()
+        char query[] = "SELECT id, userId, likes, content, created_at FROM posts WHERE userId <> $(iu.makeString(userId)) ORDER BY created_at DESC LIMIT $(iu.makeString(PAGINATION_SIZE));"
+
+        MySQL conn = createNewConnection()
+        if(!conn.execute(query)) throw new Exception("Failed to fetch post from database")
+        MySQLRow result[] = conn.fetchAll()
+        conn.close()
+        Post userPosts[] = new Post[]()
+
+        if (result.arrayLength > 0) {
+            for(int i = 0; i < result.arrayLength; i++) {
+                Post post =  pu.getPostFromMYSQLRow(result[i])
+                userPosts = new Post[](userPosts, post)
+            }
+        }
+
+        int executionTime = ls.getMilisecondsExecutionTimeSince(startExecutionTime)
+        char logMsg[] = new char[](
+            debugMSG, " ",
+            "get feed: ",
+            iu.makeString(executionTime)
+        )
+        logger.storeInfo(logMsg)
+        return userPosts
+    }
+
+    void PostsRepository:clearState() {
+        readingCache = new Post[]()
+    }
+
+}

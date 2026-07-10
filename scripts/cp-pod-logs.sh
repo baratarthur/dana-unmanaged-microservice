@@ -1,0 +1,1 @@
+kubectl logs $1 | grep -F -e "[STORE][INFO]" -e "[STORE][ERROR]" > logs-$1.txt

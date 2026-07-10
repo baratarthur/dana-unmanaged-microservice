@@ -1,0 +1,28 @@
+component provides libs.utils.PostsUtils requires repositories.posts.PostsRepository, data.mysql.MySQL, time.Calendar ic,
+data.IntUtil iu {
+    Post[] PostsUtils:accumulate(Post existingPosts[], Post newPosts[]) {
+        return new Post[](existingPosts, newPosts)
+    }
+
+    Post PostsUtils:getPostFromMYSQLRow(MySQLRow row) {
+        int id
+        int userId
+        int likes
+        char content[]
+        DateTime ttl = ic.getTime()
+
+        for(int i = 0; i < row.fields.arrayLength; i++) {
+            if ( row.fields[i].name == "id") {
+                id = iu.intFromString(row.fields[i].value)
+            } else if (row.fields[i].name == "userId") {
+                userId = iu.intFromString(row.fields[i].value)
+            } else if (row.fields[i].name == "likes") {
+                likes = iu.intFromString(row.fields[i].value)
+            } else if (row.fields[i].name == "content") {
+                content = row.fields[i].value
+            }
+        }
+
+        return new Post(id, userId, likes, content, ttl)
+    }
+}

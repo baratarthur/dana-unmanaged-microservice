@@ -1,0 +1,13 @@
+const char debugMSG[] = "[ADAPTATION LIFECICLE] -"
+
+component provides libs.adaptation.AdaptationLyfecicle requires libs.utils.Logger logger {
+    bool AdaptationLyfecicle:onLoadRemoteState() {
+        logger.storeInfo("$debugMSG Loading remote state...")
+        return true
+    }
+
+    bool AdaptationLyfecicle:onUpdateLocalState() {
+        logger.storeInfo("$debugMSG Updating local state...")
+        return true
+    }
+}

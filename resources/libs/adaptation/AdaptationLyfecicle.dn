@@ -1,0 +1,5 @@
+
+interface AdaptationLyfecicle {
+    bool onLoadRemoteState()
+    bool onUpdateLocalState()
+}

@@ -1,0 +1,8 @@
+
+interface Tags {
+    const char info[] = "[INFO] - "
+    const char warn[] = "[WARN] - "
+    const char error[] = "[ERROR] - "
+    const char storeInfo[] = "[STORE][INFO] - "
+    const char storeError[] = "[STORE][ERROR] - "
+}

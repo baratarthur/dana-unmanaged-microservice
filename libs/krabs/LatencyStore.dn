@@ -1,0 +1,34 @@
+const char debugMSG[] = "[LATENCY] -"
+
+
+component provides libs.krabs.LatencyStore requires time.Calendar ic, time.TimeUnix timeUnix,
+    libs.network.http.HTTPUtil, data.IntUtil iu, libs.utils.Logger logger, data.json.JSONEncoder je {
+    dec latencyAvarage = 0.0
+    const dec ALPHA = 0.7
+
+    int LatencyStore:getMilisecondsExecutionTimeSince(DateTime start) {
+        DateTime now = ic.getTime()
+        int startUnix = (timeUnix.toUnixTime(start)*1000) + start.millisecond
+        int nowUnix = (timeUnix.toUnixTime(now)*1000) + now.millisecond
+        int diff = nowUnix - startUnix
+        // logger.info("init: $(iu.makeString(startUnix)) | now: $(iu.makeString(nowUnix)) | diff: $(iu.makeString(diff))")
+        return diff
+    }
+
+    void LatencyStore:storeExecutionTime(int miliseconds, opt HTTPMessage req) {
+        dec convertedLatency = miliseconds
+        dec historyLatency = latencyAvarage * (1.0 - ALPHA)
+        dec currentLatency = convertedLatency * ALPHA
+        latencyAvarage = historyLatency + currentLatency
+        char logMsg[] = new char[](
+            debugMSG, " ",
+            req.command, " ", req.resource, ": ",
+            iu.makeString(miliseconds), "ms"
+        )
+        logger.storeInfo(logMsg)
+    }
+
+    dec LatencyStore:getCurrentAverageLatency() {
+        return latencyAvarage
+    }
+}

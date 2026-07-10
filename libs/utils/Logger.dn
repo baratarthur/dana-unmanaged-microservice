@@ -1,0 +1,47 @@
+uses libs.utils.Tags
+
+component provides libs.utils.Logger requires io.Output out, data.IntUtil iu, time.Calendar ic, time.TimeUnix timeUnix {
+    void Logger:info(char message[]) {
+        DateTime now = ic.getTime()
+        int timestamp = timeUnix.toUnixTime(now)
+        char timestampStr[] = iu.makeString(timestamp)
+        char completeMessage[] = new char[]("[$timestampStr]", Tags.info, " ", message)
+        asynch::log(completeMessage)
+    }
+
+    void Logger:storeInfo(char message[]) {
+        DateTime now = ic.getTime()
+        int timestamp = timeUnix.toUnixTime(now)
+        char timestampStr[] = iu.makeString(timestamp)
+        char completeMessage[] = new char[]("[$timestampStr]", Tags.storeInfo, " ", message)
+        asynch::log(completeMessage)
+    }
+
+    void Logger:warn(char message[]) {
+        DateTime now = ic.getTime()
+        int timestamp = timeUnix.toUnixTime(now)
+        char timestampStr[] = iu.makeString(timestamp)
+        char completeMessage[] = new char[]("[$timestampStr]", Tags.warn, " ", message)
+        asynch::log(completeMessage)
+    }
+
+    void Logger:error(char message[]) {
+        DateTime now = ic.getTime()
+        int timestamp = timeUnix.toUnixTime(now)
+        char timestampStr[] = iu.makeString(timestamp)
+        char completeMessage[] = new char[]("[$timestampStr]", Tags.error, " ", message)
+        asynch::log(completeMessage)
+    }
+
+    void Logger:storeError(char message[]) {
+        DateTime now = ic.getTime()
+        int timestamp = timeUnix.toUnixTime(now)
+        char timestampStr[] = iu.makeString(timestamp)
+        char completeMessage[] = new char[]("[$timestampStr]", Tags.storeError, " ", message)
+        asynch::log(completeMessage)
+    }
+
+    void log(char message[]) {
+        out.println(message)
+    }
+}

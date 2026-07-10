@@ -1,0 +1,6 @@
+uses libs.network.rpc.RPCUtil
+
+interface RemotesHandler {
+    void setRemotes(store Address newRemotes[])
+    Address[] getRemotes()
+}

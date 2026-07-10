@@ -1,0 +1,40 @@
+{
+    "name": "post-repository",
+    "allows": [" RS ", " RW ", " FS ", " FW "],
+    "dependencies": [
+        { "lib": "time.Timer", "alias": "timer" },
+        { "lib": "libs.utils.PostsUtils", "alias": "pu" }
+    ],
+    "attributes": {
+        "readingCache": { "onTransfer": "setPosts", "onLoad": "getPosts" }
+    },
+    "methods": {
+        "getPosts": {
+            "returnParser": "je.jsonToArray({}, typeof(Post[]))",
+            "remoteReturnParser": "je.jsonFromArray({})",
+            "onMerge": "pu.accumulate"
+        },
+        "setPosts": {
+            "balance": "posts",
+            "hashkey": "id"
+        },
+        "getPostById": {
+            "returnParser": "je.jsonToData({}, typeof(Post))",
+            "remoteReturnParser": "je.jsonFromData({})",
+            "hashkey": "postId"
+        },
+        "addPostInCache": {
+            "hashkey": "cachePost.id"
+        },
+        "getPostByIdFromCache": {
+            "returnParser": "je.jsonToData({}, typeof(Post))",
+            "remoteReturnParser": "je.jsonFromData({})",
+            "hashkey": "postId"
+        },
+        "getUserFeed": {
+            "returnParser": "je.jsonToArray({}, typeof(Post[]))",
+            "remoteReturnParser": "je.jsonFromArray({})",
+            "hashkey": "userId"
+        }
+    }
+}

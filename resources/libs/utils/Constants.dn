@@ -1,0 +1,6 @@
+
+interface Constants {
+    const char SEPARATOR[] = "©"
+    // @TODO: change EOF to \0
+    const char EOF[] = "\r\r\r\r"
+}

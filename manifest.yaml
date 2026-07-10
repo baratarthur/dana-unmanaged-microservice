@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dana-unmanaged-microservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dana-unmanaged-microservice
+  template:
+    metadata:
+      labels:
+        app: dana-unmanaged-microservice
+    spec:
+      containers:
+      - name: dana-unmanaged-microservice
+        image: my.private-registry.lan:5000/dana-unmanaged-microservice:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        env:
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dana-unmanaged-microservice-service
+spec:
+  type: NodePort
+  selector:
+    app: dana-unmanaged-microservice
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+    nodePort: 30080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: dana-unmanaged-microservice-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dana-unmanaged-microservice
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50

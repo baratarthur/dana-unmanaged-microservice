@@ -1,0 +1,7 @@
+uses repositories.posts.PostsRepository
+uses data.mysql.MySQL
+
+interface PostsUtils {
+    Post[] accumulate(Post existing[], Post newPosts[])
+    Post getPostFromMYSQLRow(MySQLRow row)
+}

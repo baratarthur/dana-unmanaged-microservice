@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS posts (
+    id INT NOT NULL AUTO_INCREMENT,
+    userId INT NOT NULL,
+    likes INT DEFAULT 0,
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);

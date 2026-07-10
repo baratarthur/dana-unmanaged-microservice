@@ -1,0 +1,114 @@
+ uses libs.utils.Constants
+
+const char debugMSG[] = "[@RPCUtil]"
+
+component provides libs.network.rpc.RPCUtil requires data.json.JSONEncoder je, net.TCPSocket, libs.utils.Logger logger,
+    data.IntUtil iu, data.StringUtil su, time.Calendar ic, libs.krabs.LatencyStore ls {
+
+    // TCPSocket RPCUtil:connect(Address a) {
+    //     TCPSocket connectionSocket = new TCPSocket()
+    //     connectionSocket.connect(a.name, a.port)
+    //     return connectionSocket
+    // }
+
+    Response RPCUtil:make(RequestWrapper req) {
+        DateTime startExecutionTime = ic.getTime()
+        Response r = null
+        char requestContent[] = null
+
+        if (req.r.content != null) {
+            requestContent = new char[](
+                je.jsonFromArray(req.r.meta),
+                Constants.SEPARATOR,
+                req.r.content
+            )
+        } else {
+            requestContent = je.jsonFromArray(req.r.meta)
+        }
+
+        TCPSocket connection = new TCPSocket()
+        connection.connect(req.to.name, req.to.port)
+        
+        requestContent = new char[](requestContent, Constants.EOF)
+        byte byteRequest[] = dana.serial(requestContent)
+        int requestSize = byteRequest.arrayLength
+        logger.info("Request size in bytes: $(iu.makeString(requestSize))")
+
+        connection.send(requestContent)
+        char responseContent[] = receiveData(connection)
+        String json[] = su.explode(responseContent, Constants.SEPARATOR)
+        Metadata meta[] = je.jsonToArray(json[0].string, typeof(Metadata[]))
+        if(json.arrayLength > 1) r = new Response(meta, json[1].string)
+        else r = new Response(meta)
+        connection.disconnect()
+        int executionTime = ls.getMilisecondsExecutionTimeSince(startExecutionTime)
+        char logMsg[] = new char[](
+            debugMSG, " ",
+            "RPC execution time at $(je.jsonFromArray(req.r.meta))",
+            "- address - $(req.to.name) $(iu.makeString(req.to.port)):",
+            iu.makeString(executionTime),
+            " ms"
+        )
+        logger.storeInfo(logMsg)
+        return r
+    }
+
+    char[] RPCUtil:receiveData(TCPSocket s) {
+        char buf[] = null
+        char body[] = null
+		int stopCounter = 0
+        while ((buf = s.recv(1)).arrayLength > 0) {
+            body = new char[](body, buf)
+			if(buf == "\r") stopCounter++
+			else stopCounter = 0
+			if(body.arrayLength >= 4 && stopCounter == 4) break
+		}
+        return su.rtrim(body)
+    }
+
+
+    
+    Request RPCUtil:parseRequestFromString(char requestString[]) {
+        Request r = null
+        logger.info("$debugMSG - raw request received - $requestString")
+        String json[] = su.explode(requestString, Constants.SEPARATOR)
+        Metadata meta[] = je.jsonToArray(json[0].string, typeof(Metadata[]))
+
+        if(json.arrayLength > 1) {
+            r = new Request(meta, json[1].string)
+        } else {
+            r = new Request(meta)
+        }
+
+        return r
+    }
+
+    
+    char[] RPCUtil:buildRawResponse(Response res) {
+        if(res.content == null) return new char[](je.jsonFromArray(res.meta), Constants.EOF)
+        else return new char[](je.jsonFromArray(res.meta), Constants.SEPARATOR, res.content, Constants.EOF)
+    }
+
+    Response RPCUtil:buildResponse(char method[], char status[]) {
+        Metadata statusMeta = new Metadata("status", status)
+        Metadata methodMeta = new Metadata("method", method)
+        Metadata allMetas[] = new Metadata[](statusMeta, methodMeta)
+        return new Response(allMetas)
+    }
+
+    Response RPCUtil:buildResponseWithData(char method[], char status[], char content[]) {
+        Metadata statusMeta = new Metadata("status", status)
+        Metadata methodMeta = new Metadata("method", method)
+        Metadata allMetas[] = new Metadata[](statusMeta, methodMeta)
+        return new Response(allMetas, content)
+    }
+
+    char[] RPCUtil:getMethodFromMetadata(Metadata meta[]) {
+        for(int i =0; i < meta.arrayLength; i++) {
+            if(meta[i].name == "method") return meta[i].value
+        }
+
+        return ""
+    }
+
+}
