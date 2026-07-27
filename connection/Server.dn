@@ -124,19 +124,20 @@ libs.adaptation.AdaptationLyfecicle {
         } else if (su.startsWith(req.resource, "/post/")) {
             String pathInfo[] = su.explode(req.resource, "/") // expected: ["post", "<postId:number>"]
             int postId = pathInfo[1].string.intFromString()
-            Post post = repo.getPostById(postId)
-            // stop using cache for now
-            // Post post = repo.getPostByIdFromCache(postId)
-            // if(post != null) {
-            //     char postStr[] = je.jsonFromData(post)
-            //     logger.info("post $(iu.makeString(postId)) found in cache!")
-            // }
-            // if(post == null) {
-            //     post = repo.getPostById(postId)
-            //     char postStr[] = je.jsonFromData(post)
-            //     logger.info("post $(iu.makeString(postId)) loaded from database!")
-            //     repo.addPostInCache(post)
-            // }
+            // toggle cache usage =========================================
+            // Post post = repo.getPostById(postId)
+            Post post = repo.getPostByIdFromCache(postId)
+            if(post != null) {
+                char postStr[] = je.jsonFromData(post)
+                logger.info("post $(iu.makeString(postId)) found in cache!")
+            }
+            if(post == null) {
+                post = repo.getPostById(postId)
+                char postStr[] = je.jsonFromData(post)
+                logger.info("post $(iu.makeString(postId)) loaded from database!")
+                repo.addPostInCache(post)
+            }
+            // toggle cache usage =========================================
             responseContent = je.jsonFromData(post)
             return build200(req, responseContent)
         } else if (req.resource == "/current-latency") {
