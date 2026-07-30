@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: dana-unmanaged-microservice
 spec:
-  replicas: 4
+  replicas: 1
   selector:
     matchLabels:
       app: dana-unmanaged-microservice
@@ -54,7 +54,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: dana-unmanaged-microservice
-  minReplicas: 4
+  minReplicas: 1
   maxReplicas: 5
   metrics:
   - type: Resource
