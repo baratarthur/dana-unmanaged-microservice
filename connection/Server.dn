@@ -22,29 +22,6 @@ component provides Server(Destructor) requires net.TCPSocket, net.TCPServerSocke
 composition.Adapt adapter, composition.RecursiveLoader loader, repositories.posts.PostsRepository, libs.network.http.HTTPUtil httpUtil,
 data.StringUtil su, data.json.JSONEncoder je, data.json.JSONParser jsonParser, time.Calendar ic, libs.krabs.LatencyStore ls, libs.krabs.RemotesHandler,
 libs.adaptation.AdaptationLyfecicle {
-    PostsRepository repo
-    LoadedComponents repoComponents[] = new LoadedComponents[](
-        loader.load("repositories/posts/PostsRepository.o"),
-        loader.load("repositories/posts/PostsRepository.proxy.replicate.strong.o"),
-        loader.load("repositories/posts/PostsRepository.proxy.replicate.weak.o"),
-        loader.load("repositories/posts/PostsRepository.proxy.fragment.strong.o"),
-        loader.load("repositories/posts/PostsRepository.proxy.fragment.weak.o")
-    )
-    String names[] = new String[](
-        new String("PostsRepository"),
-        new String("PostsRepository with strong replication"), 
-        new String("PostsRepository with weak replication"),
-        new String("PostsRepository with strong fragmentation"), 
-        new String("PostsRepository with weak fragmentation")
-    )
-    String remoteNames[] = new String[](
-        new String("post-repository"),
-        new String("post-repository-replicate-strong"),
-        new String("post-repository-replicate-weak"),
-        new String("post-repository-fragment-strong"),
-        new String("post-repository-fragment-weak")
-    )
-    int lastComponentIndex = 0
     bool serviceStatus = false
 
         
@@ -61,17 +38,11 @@ libs.adaptation.AdaptationLyfecicle {
 			return
 		}
 
-        initRepo()
-
 		logger.info("$debugMSG Server started on port $(iu.makeString(PORT))")
 		while (serviceStatus) {
 			TCPSocket client = new TCPSocket()
 			if (client.accept(host)) asynch::handleRequest(client)
 		}
-    }
-
-    void initRepo() {
-        repo = new PostsRepository() from repoComponents[lastComponentIndex].mainComponent
     }
     
     void Server:handleRequest(store TCPSocket s) {
@@ -99,6 +70,7 @@ libs.adaptation.AdaptationLyfecicle {
 
     HTTPResponse processGetRequests(HTTPMessage req) {
         char responseContent[] = new char[]()
+        PostsRepository repo = new PostsRepository()
 
         if (req.resource == "/") {
             responseContent = "Hello!"
@@ -151,6 +123,7 @@ libs.adaptation.AdaptationLyfecicle {
 
     HTTPResponse processPostRequests(HTTPMessage req) {
         char responseContent[] = new char[]()
+        PostsRepository repo = new PostsRepository()
 
         if (req.resource == "/post") {
             char body[] = new char[](req.postData)
@@ -158,19 +131,6 @@ libs.adaptation.AdaptationLyfecicle {
             Post newPost = new Post(0, createPostDTO.userId, 0, createPostDTO.content, new DateTime())
             repo.addPost(newPost)
             return build201(req, responseContent)
-        } else if (su.startsWith(req.resource, "/adapt/")) {
-            String pathInfo[] = su.explode(req.resource, "/") // expected: ["like", "<proxy:number>"]
-            int proxyId = pathInfo[1].string.intFromString()
-            char body[] = new char[](req.postData)
-            Address newAddress[] = je.jsonToArray(body, typeof(Address[]))
-            char proxyNamespace[] = remoteNames[proxyId].string
-
-            logger.storeInfo("$debugMSG Adapted, $proxyNamespace, $(iu.makeString(newAddress.arrayLength))")
-
-            changeRepo(proxyId, newAddress)
-
-            responseContent = "Repository changed to $proxyNamespace"
-            return build200(req, responseContent)
         }
 
         return null
@@ -228,19 +188,5 @@ libs.adaptation.AdaptationLyfecicle {
 		request.socket.send(response.body)
         // logger.info(response.body)
         // logger.info("$debugMSG - END RESPONSE CONTENT")
-    }
-
-    void changeRepo(int option, Address remotes[]) {
-        logger.info("Changing repository from $(names[lastComponentIndex].string) to $(names[option].string)")
-
-        if (lastComponentIndex != option) {
-            adapter.adaptObject(repoComponents[lastComponentIndex].mainComponent, repo, repoComponents[option].mainComponent, "repositories.posts.PostsRepository")
-            lastComponentIndex = option
-        }
-        
-        if (option != 0) {
-            RemotesHandler handler = new RemotesHandler() from repoComponents[option].mainComponent
-            handler.setRemotes(remotes)
-        }
     }
 }
