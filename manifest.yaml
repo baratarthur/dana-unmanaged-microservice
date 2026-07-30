@@ -54,7 +54,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: dana-unmanaged-microservice
-  minReplicas: 1
+  minReplicas: 4
   maxReplicas: 5
   metrics:
   - type: Resource
